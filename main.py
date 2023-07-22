@@ -22,22 +22,18 @@ def draw(canvas):
     row, column = (5, 20)
     canvas.border()
     coroutine = blink(canvas, row, column)
-    coroutine.send(None)
+    while True:
+        try:
+            coroutine.send(None)
+            time.sleep(1)
+            canvas.refresh()
+        except StopIteration:
+            break
+    time.sleep(10)
     canvas.refresh()
-    time.sleep(2)
-    coroutine.send(None)
-    canvas.refresh()
-    time.sleep(0.3)
-    coroutine.send(None)
-    canvas.refresh()
-    time.sleep(0.5)
-    coroutine.send(None)
-    canvas.refresh()
-    time.sleep(0.3)
 
 
 if __name__ == '__main__':
     curses.update_lines_cols()
     curses.wrapper(draw)
     curses.curs_set(False)
-
