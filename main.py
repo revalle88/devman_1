@@ -1,8 +1,10 @@
 import time
 import curses
 import asyncio
+import random
 
 TIC_TIMEOUT = 0.1
+STARS_AMOUNT = 45
 
 
 async def blink(canvas, row, column, symbol='*'):
@@ -25,9 +27,9 @@ async def blink(canvas, row, column, symbol='*'):
 
 
 def draw(canvas):
-    row, column = (5, 20)
     canvas.border()
-    coroutines = [blink(canvas, row, column + i) for i in range(5)]
+    h, w = canvas.getmaxyx()
+    coroutines = [blink(canvas, random.randint(1, h-1), random.randint(1, w-1), symbol=random.choice(["*", ":", ".", "+"])) for i in range(STARS_AMOUNT)]
     while True:
         try:
             for coroutine in coroutines:
