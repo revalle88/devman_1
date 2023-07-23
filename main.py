@@ -3,6 +3,8 @@ import curses
 import asyncio
 import random
 
+from fire_animation import fire
+
 TIC_TIMEOUT = 0.1
 STARS_AMOUNT = 45
 
@@ -41,14 +43,15 @@ def draw(canvas):
         )
         for i in range(STARS_AMOUNT)
     ]
+    coroutines.append(fire(canvas, 5, 5))
     while True:
-        try:
-            for coroutine in coroutines:
+        for coroutine in coroutines.copy():
+            try:
                 coroutine.send(None)
-            time.sleep(TIC_TIMEOUT)
-            canvas.refresh()
-        except StopIteration:
-            break
+            except StopIteration:
+                coroutines.remove(coroutine)
+        time.sleep(TIC_TIMEOUT)
+        canvas.refresh()
 
 
 if __name__ == '__main__':
