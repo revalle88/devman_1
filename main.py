@@ -2,7 +2,9 @@ import time
 import curses
 import asyncio
 import random
+from itertools import cycle
 
+from curses_tools import draw_frame
 from fire_animation import fire
 
 TIC_TIMEOUT = 0.1
@@ -31,6 +33,17 @@ async def blink(canvas, row, column, symbol='*'):
             await asyncio.sleep(0)
 
 
+async def draw_rocket(canvas, start_row, start_column):
+    with open("animations/rocket_frame_1.txt", "r") as my_file:
+        rocket_frame_1 = my_file.read()
+    with open("animations/rocket_frame_2.txt", "r") as my_file:
+        rocket_frame_2 = my_file.read()
+    for frame in cycle([rocket_frame_1, rocket_frame_2]):
+        draw_frame(canvas, start_row, start_column, frame, negative=False)
+        await asyncio.sleep(0)
+        draw_frame(canvas, start_row, start_column, frame, negative=True)
+
+
 def draw(canvas):
     canvas.border()
     h, w = canvas.getmaxyx()
@@ -43,7 +56,8 @@ def draw(canvas):
         )
         for i in range(STARS_AMOUNT)
     ]
-    coroutines.append(fire(canvas, 5, 5))
+    coroutines.append(draw_rocket(canvas, h/2, w/2))
+    coroutines.append(fire(canvas, h/2, w/2))
     while True:
         for coroutine in coroutines.copy():
             try:
