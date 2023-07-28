@@ -8,10 +8,10 @@ from curses_tools import draw_frame, read_controls, get_frame_size
 from fire_animation import fire
 
 TIC_TIMEOUT = 0.1
-STARS_AMOUNT = 1
+STARS_AMOUNT = 15
 
 
-async def blink(canvas, row, column, symbol='*'):
+async def blink(canvas, row, column, symbol="*"):
     while True:
         for _ in range(20):
             canvas.addstr(row, column, symbol, curses.A_DIM)
@@ -36,7 +36,7 @@ async def blink(canvas, row, column, symbol='*'):
 def validate_coordinates(canvas, frame, h, w):
     max_h, max_w = canvas.getmaxyx()
     frame_h, frame_w = get_frame_size(frame)
-    if h <= 1 or w <= 0 or h + frame_h >= max_h-1 or w + frame_w >= max_w:
+    if h <= 1 or w <= 0 or h + frame_h >= max_h - 1 or w + frame_w >= max_w:
         return False
     return True
 
@@ -67,11 +67,13 @@ def draw(canvas):
             canvas,
             random.randint(1, h - 1),
             random.randint(1, w - 1),
-            symbol=random.choice(["*", ":", ".", "+"])
+            symbol=random.choice(["*", ":", ".", "+"]),
         )
         for i in range(STARS_AMOUNT)
     ]
-    coroutines.append(draw_rocket(canvas, h / 2, w / 2, [rocket_frame_1, rocket_frame_2]))
+    coroutines.append(
+        draw_rocket(canvas, h / 2, w / 2, [rocket_frame_1, rocket_frame_2])
+    )
     coroutines.append(fire(canvas, h / 2, w / 2))
     while True:
         for coroutine in coroutines.copy():
@@ -83,7 +85,7 @@ def draw(canvas):
         canvas.refresh()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     curses.update_lines_cols()
     curses.wrapper(draw)
     curses.curs_set(False)
