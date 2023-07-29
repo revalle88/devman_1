@@ -48,27 +48,23 @@ def _get_max_xy(canvas):
     return (i - 1 for i in canvas.getmaxyx())
 
 
-def validate_coordinates(canvas, frame, row, col):
+def _calculate_coordinates(canvas, frame, row, col):
     max_row, max_col = _get_max_xy(canvas)
     frame_h, frame_w = get_frame_size(frame)
-    if (
-        row <= 0 + BORDER_WIDTH
-        or col <= 0 + BORDER_WIDTH
-        or row + frame_h > max_row
-        or col + frame_w >= max_col
-    ):
-        return False
-    return True
+    row, col = max(row, 0 + BORDER_WIDTH), max(col, 0 + BORDER_WIDTH)
+    row, col = min(row, max_row - frame_h), min(col, max_col - frame_w)
+    return row, col
 
 
 async def draw_rocket(canvas, start_row, start_column, frames):
-    row, col = prev_row, prev_col = start_row, start_column
+    row, col = start_row, start_column
     for frame in cycle(frames):
         draw_frame(canvas, row, col, frame, negative=False)
         row_offset, col_offset, _ = read_controls(canvas)
-        if validate_coordinates(canvas, frame, row + row_offset, col + col_offset):
-            prev_row, prev_col = row, col
-            row, col = row + row_offset, col + col_offset
+        prev_row, prev_col = row, col
+        row, col = _calculate_coordinates(
+            canvas, frame, row + row_offset, col + col_offset
+        )
         await asyncio.sleep(0)
         draw_frame(canvas, prev_row, prev_col, frame, negative=True)
 
