@@ -9,72 +9,92 @@ from fire_animation import fire
 
 TIC_TIMEOUT = 0.1
 STARS_AMOUNT = 15
+OFFSET_TICS = 10
+BORDER_WIDTH = 1
+
+STARS_DIM_DURATION = 20
+STARS_NORMAL_DURATION = 3
+STARS_BOLD_DURATION = 5
 
 
-async def blink(canvas, row, column, symbol="*"):
+async def blink(canvas, row, column, symbol="*", offset_tics=0):
     while True:
-        for _ in range(20):
+        for _ in range(STARS_DIM_DURATION):
             canvas.addstr(row, column, symbol, curses.A_DIM)
             await asyncio.sleep(0)
 
-        for _ in range(random.randint(0, 10)):
+        for _ in range(offset_tics):
             await asyncio.sleep(0)
 
-        for _ in range(3):
+        for _ in range(STARS_NORMAL_DURATION):
             canvas.addstr(row, column, symbol)
             await asyncio.sleep(0)
 
-        for _ in range(5):
+        for _ in range(STARS_BOLD_DURATION):
             canvas.addstr(row, column, symbol, curses.A_BOLD)
             await asyncio.sleep(0)
 
-        for _ in range(3):
+        for _ in range(STARS_NORMAL_DURATION):
             canvas.addstr(row, column, symbol)
             await asyncio.sleep(0)
 
 
-def validate_coordinates(canvas, frame, h, w):
-    max_h, max_w = canvas.getmaxyx()
+def _get_max_xy(canvas):
+    """
+    Метод window.getmaxyx(), несмотря на своё название, возвращает
+    не координаты крайней ячейке, а ширину и высоту окна. Они всегда будут на единицу больше,
+    чем координаты крайней ячейки из-за того, что нумерация начинается с нуля.
+    """
+    return (i - 1 for i in canvas.getmaxyx())
+
+
+def validate_coordinates(canvas, frame, row, col):
+    max_row, max_col = _get_max_xy(canvas)
     frame_h, frame_w = get_frame_size(frame)
-    if h <= 1 or w <= 0 or h + frame_h >= max_h - 1 or w + frame_w >= max_w:
+    if (
+        row <= 0 + BORDER_WIDTH
+        or col <= 0 + BORDER_WIDTH
+        or row + frame_h > max_row
+        or col + frame_w >= max_col
+    ):
         return False
     return True
 
 
 async def draw_rocket(canvas, start_row, start_column, frames):
-    h, w = start_row, start_column
+    row, col = prev_row, prev_col = start_row, start_column
     for frame in cycle(frames):
-        rocket_h, rocket_w, _ = read_controls(canvas)
-        if validate_coordinates(canvas, frame, h + rocket_h, w + rocket_w):
-            h, w = h + rocket_h, w + rocket_w
-        draw_frame(canvas, h, w, frame, negative=False)
-        for _ in range(2):
-            await asyncio.sleep(0)
-        draw_frame(canvas, h, w, frame, negative=True)
+        draw_frame(canvas, row, col, frame, negative=False)
+        row_offset, col_offset, _ = read_controls(canvas)
+        if validate_coordinates(canvas, frame, row + row_offset, col + col_offset):
+            prev_row, prev_col = row, col
+            row, col = row + row_offset, col + col_offset
+        await asyncio.sleep(0)
+        draw_frame(canvas, prev_row, prev_col, frame, negative=True)
 
 
 def draw(canvas):
     canvas.nodelay(True)
     canvas.border()
-    h, w = canvas.getmaxyx()
+    max_row, max_col = _get_max_xy(canvas)
     with open("animations/rocket_frame_1.txt", "r") as my_file:
         rocket_frame_1 = my_file.read()
     with open("animations/rocket_frame_2.txt", "r") as my_file:
         rocket_frame_2 = my_file.read()
+    rocket_frames = [rocket_frame_1, rocket_frame_1, rocket_frame_2, rocket_frame_2]
 
     coroutines = [
         blink(
             canvas,
-            random.randint(1, h - 1),
-            random.randint(1, w - 1),
+            random.randint(BORDER_WIDTH, max_row - BORDER_WIDTH),
+            random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
             symbol=random.choice(["*", ":", ".", "+"]),
+            offset_tics=random.randint(0, OFFSET_TICS),
         )
         for i in range(STARS_AMOUNT)
     ]
-    coroutines.append(
-        draw_rocket(canvas, h / 2, w / 2, [rocket_frame_1, rocket_frame_2])
-    )
-    coroutines.append(fire(canvas, h / 2, w / 2))
+    coroutines.append(draw_rocket(canvas, max_row / 2, max_col / 2, rocket_frames))
+    coroutines.append(fire(canvas, max_row / 2, max_col / 2))
     while True:
         for coroutine in coroutines.copy():
             try:
