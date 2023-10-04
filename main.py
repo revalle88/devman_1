@@ -21,26 +21,25 @@ STARS_BOLD_DURATION = 5
 coroutines = []
 
 
+async def countdown_tics(tics):
+    for _ in range(tics):
+        await asyncio.sleep(0)
+
+
 async def blink(canvas, row, column, symbol="*", offset_tics=0):
     while True:
-        for _ in range(STARS_DIM_DURATION):
-            canvas.addstr(row, column, symbol, curses.A_DIM)
-            await asyncio.sleep(0)
+        canvas.addstr(row, column, symbol, curses.A_DIM)
+        await countdown_tics(STARS_DIM_DURATION)
+        await countdown_tics(offset_tics)
 
-        for _ in range(offset_tics):
-            await asyncio.sleep(0)
+        canvas.addstr(row, column, symbol)
+        await countdown_tics(STARS_NORMAL_DURATION)
 
-        for _ in range(STARS_NORMAL_DURATION):
-            canvas.addstr(row, column, symbol)
-            await asyncio.sleep(0)
+        canvas.addstr(row, column, symbol, curses.A_BOLD)
+        await countdown_tics(STARS_BOLD_DURATION)
 
-        for _ in range(STARS_BOLD_DURATION):
-            canvas.addstr(row, column, symbol, curses.A_BOLD)
-            await asyncio.sleep(0)
-
-        for _ in range(STARS_NORMAL_DURATION):
-            canvas.addstr(row, column, symbol)
-            await asyncio.sleep(0)
+        canvas.addstr(row, column, symbol)
+        await countdown_tics(STARS_NORMAL_DURATION)
 
 
 def _get_max_xy(canvas):
@@ -91,8 +90,7 @@ async def fill_orbit_with_garbage(canvas):
         frames.append(garbage_file.read())
 
     while True:
-        for _ in range(random.randint(0, GARBAGE_OFFSET_TICS)):
-            await asyncio.sleep(0)
+        await countdown_tics(random.randint(0, GARBAGE_OFFSET_TICS))
         coroutines.append(
             fly_garbage(
                 canvas,
