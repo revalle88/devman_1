@@ -6,6 +6,7 @@ from itertools import cycle
 
 from curses_tools import draw_frame, read_controls, get_frame_size
 from fire_animation import fire
+from garbage_animation import fly_garbage
 
 TIC_TIMEOUT = 0.1
 STARS_AMOUNT = 15
@@ -78,6 +79,8 @@ def draw(canvas):
     with open("animations/rocket_frame_2.txt", "r") as my_file:
         rocket_frame_2 = my_file.read()
     rocket_frames = [rocket_frame_1, rocket_frame_1, rocket_frame_2, rocket_frame_2]
+    with open("animations/garbage/duck.txt", "r") as garbage_file:
+        garbage_frame = garbage_file.read()
 
     coroutines = [
         blink(
@@ -89,6 +92,7 @@ def draw(canvas):
         )
         for i in range(STARS_AMOUNT)
     ]
+    coroutines.append(fly_garbage(canvas, column=10, garbage_frame=garbage_frame))
     coroutines.append(draw_rocket(canvas, max_row / 2, max_col / 2, rocket_frames))
     coroutines.append(fire(canvas, max_row / 2, max_col / 2))
     while True:
