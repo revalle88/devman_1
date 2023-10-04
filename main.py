@@ -12,10 +12,13 @@ TIC_TIMEOUT = 0.1
 STARS_AMOUNT = 15
 OFFSET_TICS = 10
 BORDER_WIDTH = 1
+GARBAGE_OFFSET_TICS = 30
 
 STARS_DIM_DURATION = 20
 STARS_NORMAL_DURATION = 3
 STARS_BOLD_DURATION = 5
+
+coroutines = []
 
 
 async def blink(canvas, row, column, symbol="*", offset_tics=0):
@@ -70,6 +73,35 @@ async def draw_rocket(canvas, start_row, start_column, frames):
         draw_frame(canvas, prev_row, prev_col, frame, negative=True)
 
 
+async def fill_orbit_with_garbage(canvas):
+    frames = []
+    max_row, max_col = _get_max_xy(canvas)
+
+    with open("animations/garbage/duck.txt", "r") as garbage_file:
+        frames.append(garbage_file.read())
+    with open("animations/garbage/hubble.txt", "r") as garbage_file:
+        frames.append(garbage_file.read())
+    with open("animations/garbage/lamp.txt", "r") as garbage_file:
+        frames.append(garbage_file.read())
+    with open("animations/garbage/trash_large.txt", "r") as garbage_file:
+        frames.append(garbage_file.read())
+    with open("animations/garbage/trash_small.txt", "r") as garbage_file:
+        frames.append(garbage_file.read())
+    with open("animations/garbage/trash_x1.txt", "r") as garbage_file:
+        frames.append(garbage_file.read())
+
+    while True:
+        for _ in range(random.randint(0, GARBAGE_OFFSET_TICS)):
+            await asyncio.sleep(0)
+        coroutines.append(
+            fly_garbage(
+                canvas,
+                column=random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
+                garbage_frame=frames[random.randint(0, len(frames) - 1)],
+            )
+        )
+
+
 def draw(canvas):
     canvas.nodelay(True)
     canvas.border()
@@ -79,22 +111,20 @@ def draw(canvas):
     with open("animations/rocket_frame_2.txt", "r") as my_file:
         rocket_frame_2 = my_file.read()
     rocket_frames = [rocket_frame_1, rocket_frame_1, rocket_frame_2, rocket_frame_2]
-    with open("animations/garbage/duck.txt", "r") as garbage_file:
-        garbage_frame = garbage_file.read()
 
-    coroutines = [
-        blink(
-            canvas,
-            random.randint(BORDER_WIDTH, max_row - BORDER_WIDTH),
-            random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
-            symbol=random.choice(["*", ":", ".", "+"]),
-            offset_tics=random.randint(0, OFFSET_TICS),
+    for i in range(STARS_AMOUNT):
+        coroutines.append(
+            blink(
+                canvas,
+                random.randint(BORDER_WIDTH, max_row - BORDER_WIDTH),
+                random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
+                symbol=random.choice(["*", ":", ".", "+"]),
+                offset_tics=random.randint(0, OFFSET_TICS),
+            )
         )
-        for i in range(STARS_AMOUNT)
-    ]
-    coroutines.append(fly_garbage(canvas, column=10, garbage_frame=garbage_frame))
     coroutines.append(draw_rocket(canvas, max_row / 2, max_col / 2, rocket_frames))
     coroutines.append(fire(canvas, max_row / 2, max_col / 2))
+    coroutines.append(fill_orbit_with_garbage(canvas))
     while True:
         for coroutine in coroutines.copy():
             try:
