@@ -7,6 +7,7 @@ from itertools import cycle
 from curses_tools import draw_frame, read_controls, get_frame_size
 from fire_animation import fire
 from garbage_animation import fly_garbage
+from obstacles import show_obstacles
 from physics import update_speed
 
 TIC_TIMEOUT = 0.1
@@ -20,6 +21,7 @@ STARS_NORMAL_DURATION = 3
 STARS_BOLD_DURATION = 5
 
 coroutines = []
+obstacles = []
 row_speed = col_speed = 0
 
 
@@ -104,6 +106,7 @@ async def fill_orbit_with_garbage(canvas):
                 canvas,
                 column=random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
                 garbage_frame=frames[random.randint(0, len(frames) - 1)],
+                obstacles=obstacles,
             )
         )
 
@@ -131,6 +134,7 @@ def draw(canvas):
     coroutines.append(draw_rocket(canvas, max_row / 2, max_col / 2, rocket_frames))
     coroutines.append(fire(canvas, max_row / 2, max_col / 2))
     coroutines.append(fill_orbit_with_garbage(canvas))
+    coroutines.append(show_obstacles(canvas, obstacles))
     while True:
         for coroutine in coroutines.copy():
             try:
