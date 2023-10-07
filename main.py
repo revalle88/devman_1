@@ -69,7 +69,9 @@ async def draw_rocket(canvas, start_row, start_column, frames):
     row, col = start_row, start_column
     for frame in cycle(frames):
         draw_frame(canvas, row, col, frame, negative=False)
-        row_offset, col_offset, _ = read_controls(canvas)
+        row_offset, col_offset, space_pressed = read_controls(canvas)
+        if space_pressed:
+            coroutines.append(fire(canvas, row, col))
         prev_row, prev_col = row, col
         row, col = _calculate_next_coordinates(
             canvas, frame, row, row_offset, col, col_offset
