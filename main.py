@@ -7,6 +7,7 @@ from itertools import cycle
 from curses_tools import draw_frame, read_controls, get_frame_size
 from fire_animation import fire
 from garbage_animation import fly_garbage
+from physics import update_speed
 
 TIC_TIMEOUT = 0.1
 STARS_AMOUNT = 15
@@ -19,6 +20,7 @@ STARS_NORMAL_DURATION = 3
 STARS_BOLD_DURATION = 5
 
 coroutines = []
+row_speed = col_speed = 0
 
 
 async def countdown_tics(tics):
@@ -51,7 +53,11 @@ def _get_max_xy(canvas):
     return (i - 1 for i in canvas.getmaxyx())
 
 
-def _calculate_coordinates(canvas, frame, row, col):
+def _calculate_next_coordinates(canvas, frame, row, row_offset, col, col_offset):
+    global row_speed
+    global col_speed
+    row_speed, col_speed = update_speed(row_speed, col_speed, row_offset, col_offset)
+    row, col = row + row_speed, col + col_speed
     max_row, max_col = _get_max_xy(canvas)
     frame_h, frame_w = get_frame_size(frame)
     row, col = max(row, 0 + BORDER_WIDTH), max(col, 0 + BORDER_WIDTH)
@@ -65,8 +71,8 @@ async def draw_rocket(canvas, start_row, start_column, frames):
         draw_frame(canvas, row, col, frame, negative=False)
         row_offset, col_offset, _ = read_controls(canvas)
         prev_row, prev_col = row, col
-        row, col = _calculate_coordinates(
-            canvas, frame, row + row_offset, col + col_offset
+        row, col = _calculate_next_coordinates(
+            canvas, frame, row, row_offset, col, col_offset
         )
         await asyncio.sleep(0)
         draw_frame(canvas, prev_row, prev_col, frame, negative=True)
