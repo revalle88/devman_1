@@ -111,6 +111,7 @@ async def fill_orbit_with_garbage(canvas):
                 garbage_frame=frames[random.randint(0, len(frames) - 1)],
                 obstacles=obstacles,
                 obstacles_in_last_collisions=obstacles_in_last_collisions,
+                coroutines=coroutines,
             )
         )
 
