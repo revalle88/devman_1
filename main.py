@@ -22,6 +22,7 @@ STARS_BOLD_DURATION = 5
 
 coroutines = []
 obstacles = []
+obstacles_in_last_collisions = []
 row_speed = col_speed = 0
 
 
@@ -73,7 +74,9 @@ async def draw_rocket(canvas, start_row, start_column, frames):
         draw_frame(canvas, row, col, frame, negative=False)
         row_offset, col_offset, space_pressed = read_controls(canvas)
         if space_pressed:
-            coroutines.append(fire(canvas, row, col))
+            coroutines.append(
+                fire(canvas, row, col, obstacles, obstacles_in_last_collisions)
+            )
         prev_row, prev_col = row, col
         row, col = _calculate_next_coordinates(
             canvas, frame, row, row_offset, col, col_offset
@@ -107,6 +110,7 @@ async def fill_orbit_with_garbage(canvas):
                 column=random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
                 garbage_frame=frames[random.randint(0, len(frames) - 1)],
                 obstacles=obstacles,
+                obstacles_in_last_collisions=obstacles_in_last_collisions,
             )
         )
 
@@ -132,7 +136,6 @@ def draw(canvas):
             )
         )
     coroutines.append(draw_rocket(canvas, max_row / 2, max_col / 2, rocket_frames))
-    coroutines.append(fire(canvas, max_row / 2, max_col / 2))
     coroutines.append(fill_orbit_with_garbage(canvas))
     coroutines.append(show_obstacles(canvas, obstacles))
     while True:
