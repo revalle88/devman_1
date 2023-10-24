@@ -61,7 +61,9 @@ def _get_max_xy(canvas):
 
 
 def _calculate_next_coordinates(canvas, frame, row, row_offset, col, col_offset):
-    globals.row_speed, globals.col_speed = update_speed(globals.row_speed, globals.col_speed, row_offset, col_offset)
+    globals.row_speed, globals.col_speed = update_speed(
+        globals.row_speed, globals.col_speed, row_offset, col_offset
+    )
     row, col = row + globals.row_speed, col + globals.col_speed
     max_row, max_col = _get_max_xy(canvas)
     frame_h, frame_w = get_frame_size(frame)
@@ -92,9 +94,7 @@ async def run_spaceship(canvas, start_row, start_column, frames):
         draw_frame(canvas, row, col, frame, negative=False)
         row_offset, col_offset, space_pressed = read_controls(canvas)
         if space_pressed and globals.year >= GUN_ACQUIRE_YEAR:
-            globals.coroutines.append(
-                fire(canvas, row, col)
-            )
+            globals.coroutines.append(fire(canvas, row, col))
         prev_row, prev_col = row, col
         row, col = _calculate_next_coordinates(
             canvas, frame, row, row_offset, col, col_offset
@@ -181,7 +181,9 @@ def draw(canvas):
                 offset_tics=random.randint(0, OFFSET_TICS),
             )
         )
-    globals.coroutines.append(run_spaceship(canvas, max_row / 2, max_col / 2, rocket_frames))
+    globals.coroutines.append(
+        run_spaceship(canvas, max_row / 2, max_col / 2, rocket_frames)
+    )
     globals.coroutines.append(fill_orbit_with_garbage(canvas))
     while True:
         for coroutine in globals.coroutines.copy():
