@@ -8,6 +8,7 @@ import curses_tools
 from curses_tools import draw_frame, read_controls, get_frame_size
 from explosion import explode
 from fire_animation import fire
+from game_scenario import get_garbage_delay_tics, PHRASES
 from garbage_animation import fly_garbage
 from obstacles import show_obstacles
 from physics import update_speed
@@ -15,17 +16,22 @@ from physics import update_speed
 TIC_TIMEOUT = 0.1
 STARS_AMOUNT = 15
 OFFSET_TICS = 10
-BORDER_WIDTH = 1
 GARBAGE_OFFSET_TICS = 30
+TICS_PER_YEAR = 15
 
 STARS_DIM_DURATION = 20
 STARS_NORMAL_DURATION = 3
 STARS_BOLD_DURATION = 5
 
+TEXT_WINDOW_WIDTH = 25
+BORDER_WIDTH = 1
+
+
 coroutines = []
 obstacles = []
 obstacles_in_last_collisions = []
 row_speed = col_speed = 0
+year = 1957
 
 
 async def countdown_tics(tics):
@@ -76,7 +82,12 @@ async def game_over(canvas):
         game_over_frame_1 = my_file.read()
     row_size, col_size = curses_tools.get_frame_size(game_over_frame_1)
     while True:
-        draw_frame(canvas, (max_row - row_size) / 2, (max_col - col_size) / 2, game_over_frame_1)
+        draw_frame(
+            canvas,
+            (max_row - row_size) / 2,
+            (max_col - col_size) / 2,
+            game_over_frame_1,
+        )
         await asyncio.sleep(0)
 
 
@@ -128,28 +139,49 @@ async def fill_orbit_with_garbage(canvas):
         frames.append(garbage_file.read())
 
     while True:
-        await countdown_tics(random.randint(0, GARBAGE_OFFSET_TICS))
-        coroutines.append(
-            fly_garbage(
-                canvas,
-                column=random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
-                garbage_frame=frames[random.randint(0, len(frames) - 1)],
-                obstacles=obstacles,
-                obstacles_in_last_collisions=obstacles_in_last_collisions,
-                coroutines=coroutines,
+        if tics := get_garbage_delay_tics(year):
+            await countdown_tics(tics)
+            coroutines.append(
+                fly_garbage(
+                    canvas,
+                    column=random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
+                    garbage_frame=frames[random.randint(0, len(frames) - 1)],
+                    obstacles=obstacles,
+                    obstacles_in_last_collisions=obstacles_in_last_collisions,
+                    coroutines=coroutines,
+                )
             )
-        )
+        else:
+            await countdown_tics(TICS_PER_YEAR)
+
+
+async def show_year(canvas):
+    """render text"""
+    global year
+    while True:
+        text = f"Year: {year} {PHRASES.get(year, '')}"
+        draw_frame(canvas, 0, 0, text)
+        await asyncio.sleep(0)
+        # await countdown_tics(TICS_PER_YEAR)
+        draw_frame(canvas, 0, 0, text, negative=True)
 
 
 def draw(canvas):
+    global year
+    current_tick = 0
     canvas.nodelay(True)
     canvas.border()
     max_row, max_col = _get_max_xy(canvas)
+
+    text_window = canvas.derwin(1, TEXT_WINDOW_WIDTH, max_row - 1, max_col // 2)
+
     with open("animations/rocket_frame_1.txt", "r") as my_file:
         rocket_frame_1 = my_file.read()
     with open("animations/rocket_frame_2.txt", "r") as my_file:
         rocket_frame_2 = my_file.read()
     rocket_frames = [rocket_frame_1, rocket_frame_1, rocket_frame_2, rocket_frame_2]
+
+    coroutines.append(show_year(text_window))
 
     for i in range(STARS_AMOUNT):
         coroutines.append(
@@ -171,6 +203,10 @@ def draw(canvas):
             except StopIteration:
                 coroutines.remove(coroutine)
         time.sleep(TIC_TIMEOUT)
+        current_tick += 1
+        if current_tick >= TICS_PER_YEAR:
+            year += 1
+            current_tick = 0
         canvas.refresh()
 
 
