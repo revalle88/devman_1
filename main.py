@@ -8,9 +8,10 @@ import curses_tools
 from curses_tools import draw_frame, read_controls, get_frame_size
 from explosion import explode
 from fire_animation import fire
+import globals
+
 from game_scenario import get_garbage_delay_tics, PHRASES
 from garbage_animation import fly_garbage
-from obstacles import show_obstacles
 from physics import update_speed
 
 TIC_TIMEOUT = 0.1
@@ -23,15 +24,10 @@ STARS_DIM_DURATION = 20
 STARS_NORMAL_DURATION = 3
 STARS_BOLD_DURATION = 5
 
+GUN_ACQUIRE_YEAR = 1970
+
 TEXT_WINDOW_WIDTH = 25
 BORDER_WIDTH = 1
-
-
-coroutines = []
-obstacles = []
-obstacles_in_last_collisions = []
-row_speed = col_speed = 0
-year = 1957
 
 
 async def countdown_tics(tics):
@@ -65,10 +61,8 @@ def _get_max_xy(canvas):
 
 
 def _calculate_next_coordinates(canvas, frame, row, row_offset, col, col_offset):
-    global row_speed
-    global col_speed
-    row_speed, col_speed = update_speed(row_speed, col_speed, row_offset, col_offset)
-    row, col = row + row_speed, col + col_speed
+    globals.row_speed, globals.col_speed = update_speed(globals.row_speed, globals.col_speed, row_offset, col_offset)
+    row, col = row + globals.row_speed, col + globals.col_speed
     max_row, max_col = _get_max_xy(canvas)
     frame_h, frame_w = get_frame_size(frame)
     row, col = max(row, 0 + BORDER_WIDTH), max(col, 0 + BORDER_WIDTH)
@@ -97,9 +91,9 @@ async def run_spaceship(canvas, start_row, start_column, frames):
     for frame in cycle(frames):
         draw_frame(canvas, row, col, frame, negative=False)
         row_offset, col_offset, space_pressed = read_controls(canvas)
-        if space_pressed:
-            coroutines.append(
-                fire(canvas, row, col, obstacles, obstacles_in_last_collisions)
+        if space_pressed and globals.year >= GUN_ACQUIRE_YEAR:
+            globals.coroutines.append(
+                fire(canvas, row, col)
             )
         prev_row, prev_col = row, col
         row, col = _calculate_next_coordinates(
@@ -107,17 +101,17 @@ async def run_spaceship(canvas, start_row, start_column, frames):
         )
         await asyncio.sleep(0)
         draw_frame(canvas, prev_row, prev_col, frame, negative=True)
-        for obstacle in obstacles:
+        for obstacle in globals.obstacles:
             if obstacle.has_collision(row, col):
-                obstacles_in_last_collisions.append(obstacle)
-                coroutines.append(
+                globals.obstacles_in_last_collisions.append(obstacle)
+                globals.coroutines.append(
                     explode(
                         canvas,
                         row + row_size / 2,
                         col + col_size / 2,
                     )
                 )
-                coroutines.append(game_over(canvas))
+                globals.coroutines.append(game_over(canvas))
                 return
 
 
@@ -139,16 +133,13 @@ async def fill_orbit_with_garbage(canvas):
         frames.append(garbage_file.read())
 
     while True:
-        if tics := get_garbage_delay_tics(year):
+        if tics := get_garbage_delay_tics(globals.year):
             await countdown_tics(tics)
-            coroutines.append(
+            globals.coroutines.append(
                 fly_garbage(
                     canvas,
                     column=random.randint(BORDER_WIDTH, max_col - BORDER_WIDTH),
                     garbage_frame=frames[random.randint(0, len(frames) - 1)],
-                    obstacles=obstacles,
-                    obstacles_in_last_collisions=obstacles_in_last_collisions,
-                    coroutines=coroutines,
                 )
             )
         else:
@@ -157,17 +148,14 @@ async def fill_orbit_with_garbage(canvas):
 
 async def show_year(canvas):
     """render text"""
-    global year
     while True:
-        text = f"Year: {year} {PHRASES.get(year, '')}"
+        text = f"Year: {globals.year} {PHRASES.get(globals.year, '')}"
         draw_frame(canvas, 0, 0, text)
-        await asyncio.sleep(0)
-        # await countdown_tics(TICS_PER_YEAR)
+        await countdown_tics(TICS_PER_YEAR)
         draw_frame(canvas, 0, 0, text, negative=True)
 
 
 def draw(canvas):
-    global year
     current_tick = 0
     canvas.nodelay(True)
     canvas.border()
@@ -181,10 +169,10 @@ def draw(canvas):
         rocket_frame_2 = my_file.read()
     rocket_frames = [rocket_frame_1, rocket_frame_1, rocket_frame_2, rocket_frame_2]
 
-    coroutines.append(show_year(text_window))
+    globals.coroutines.append(show_year(text_window))
 
     for i in range(STARS_AMOUNT):
-        coroutines.append(
+        globals.coroutines.append(
             blink(
                 canvas,
                 random.randint(BORDER_WIDTH, max_row - BORDER_WIDTH),
@@ -193,19 +181,18 @@ def draw(canvas):
                 offset_tics=random.randint(0, OFFSET_TICS),
             )
         )
-    coroutines.append(run_spaceship(canvas, max_row / 2, max_col / 2, rocket_frames))
-    coroutines.append(fill_orbit_with_garbage(canvas))
-    coroutines.append(show_obstacles(canvas, obstacles))
+    globals.coroutines.append(run_spaceship(canvas, max_row / 2, max_col / 2, rocket_frames))
+    globals.coroutines.append(fill_orbit_with_garbage(canvas))
     while True:
-        for coroutine in coroutines.copy():
+        for coroutine in globals.coroutines.copy():
             try:
                 coroutine.send(None)
             except StopIteration:
-                coroutines.remove(coroutine)
+                globals.coroutines.remove(coroutine)
         time.sleep(TIC_TIMEOUT)
         current_tick += 1
         if current_tick >= TICS_PER_YEAR:
-            year += 1
+            globals.year += 1
             current_tick = 0
         canvas.refresh()
 

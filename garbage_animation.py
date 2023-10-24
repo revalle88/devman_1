@@ -4,15 +4,13 @@ import asyncio
 
 from explosion import explode
 from obstacles import Obstacle
+from globals import coroutines, obstacles, obstacles_in_last_collisions
 
 
 async def fly_garbage(
     canvas,
     column,
     garbage_frame,
-    obstacles,
-    obstacles_in_last_collisions,
-    coroutines,
     speed=0.5,
 ):
     """Animate garbage, flying from top to bottom. Сolumn position will stay same, as specified on start."""
