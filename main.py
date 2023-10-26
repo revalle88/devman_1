@@ -2,6 +2,7 @@ import time
 import curses
 import asyncio
 import random
+import os, glob
 from itertools import cycle
 
 import curses_tools
@@ -28,6 +29,8 @@ GUN_ACQUIRE_YEAR = 1970
 
 TEXT_WINDOW_WIDTH = 25
 BORDER_WIDTH = 1
+
+GARBAGE_ANIMATION_FOLDER = "animations/garbage/"
 
 
 async def countdown_tics(tics):
@@ -118,19 +121,9 @@ async def run_spaceship(canvas, start_row, start_column, frames):
 async def fill_orbit_with_garbage(canvas):
     frames = []
     max_row, max_col = _get_max_xy(canvas)
-
-    with open("animations/garbage/duck.txt", "r") as garbage_file:
-        frames.append(garbage_file.read())
-    with open("animations/garbage/hubble.txt", "r") as garbage_file:
-        frames.append(garbage_file.read())
-    with open("animations/garbage/lamp.txt", "r") as garbage_file:
-        frames.append(garbage_file.read())
-    with open("animations/garbage/trash_large.txt", "r") as garbage_file:
-        frames.append(garbage_file.read())
-    with open("animations/garbage/trash_small.txt", "r") as garbage_file:
-        frames.append(garbage_file.read())
-    with open("animations/garbage/trash_x1.txt", "r") as garbage_file:
-        frames.append(garbage_file.read())
+    for filename in glob.glob(os.path.join(GARBAGE_ANIMATION_FOLDER, "*.txt")):
+        with open(filename, "r") as garbage_file:
+            frames.append(garbage_file.read())
 
     while True:
         if tics := get_garbage_delay_tics(globals.year):
